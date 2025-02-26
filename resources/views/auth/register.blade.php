@@ -1,5 +1,5 @@
 <x-guest-layout>
-    <form id="register-form" method="post" action="{{route('register')}}" onsubmit="event.preventDefault(); registerUser();">
+    <form id="register-form" onsubmit="event.preventDefault(); registerUser();">
         @csrf
 
         <!-- Name -->
@@ -58,7 +58,8 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        "Accept": "application/json"
                     },
                     body: JSON.stringify({
                         name: name,
@@ -70,19 +71,19 @@
 
                 const data = await response.json();
 
-                if (data.success) {
+                // if (data.success) {
                     // Almacenar el token en localStorage
                     localStorage.setItem('token', data.token);
                     console.log("Registro exitoso");
 
                     // Redirigir al usuario a la página deseada después del registro
                     window.location.href = '/pago';
-                } else {
-                    alert('Registro fallido');
-                }
+                // } else {
+                //     alert('Registro fallido: ' + data);
+                // }
             } catch (error) {
                 console.error('Error al registrar:', error);
-                alert('Hubo un error al intentar registrarte');
+                alert('Hubo un error al intentar registrarte: ' + error.message);
             }
         }
     </script>

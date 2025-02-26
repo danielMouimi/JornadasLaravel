@@ -6,6 +6,8 @@ use App\Models\Ponente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
+use App\Http\Requests\PonenteRequest;
+
 class PonenteController extends Controller
 {
     /**
@@ -27,33 +29,33 @@ class PonenteController extends Controller
     // Formulario para crear un ponente
     public function create()
     {
+
         return view('admin.ponentes.create');
     }
 
     // Guardar un nuevo ponente
-    public function store(Request $request)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'experiencia' => 'nullable|string',
-            'redes_sociales' => 'nullable|string',
-            'foto' => 'nullable|image|max:2048'
-        ]);
+    public function store(PonenteRequest $request){
+        $fotografia = $request->file('fotografia');
 
-        $ponente = new Ponente();
-        $ponente->nombre = $request->nombre;
-        $ponente->experiencia = $request->experiencia;
-        $ponente->redes_sociales = $request->redes_sociales;
-
-        // Guardar imagen si se sube una
-        if ($request->hasFile('foto')) {
-            $path = $request->file('foto')->store('ponentes', 'public');
-            $ponente->foto = $path;
+        if($fotografia->isValid()){
+            $fotografiaExtension = $fotografia->getClientOriginalExtension();
+            $fotografiaNombre = uniqid('', true) . '_' . time() . '.' . $fotografiaExtension;
+            $fotografiaPath = $request->file('fotografia')->storeAs('ponentes', $fotografiaNombre, 'public');
         }
 
-        $ponente->save();
+        $ponente = Ponente::create([
+            'nombre' => $request->nombre,
+            'fotografia' => $fotografiaPath,
+            'areas_experiencia' => $request->areas_experiencia,
+            'redes_sociales' => $request->redes_sociales,
+        ]);
 
-        return redirect()->route('admin.ponentes.index')->with('success', 'Ponente creado correctamente.');
+        $data = [
+            'mensaje' => 'Se ha registrado un nuevo ponente',
+            'ponente' => $ponente,
+            'status' => 200
+        ];
+        return response()->json($data, 200);
     }
 
     // Formulario de edición
@@ -123,32 +125,38 @@ class PonenteController extends Controller
         return response()->json($ponente, 200);
     }
 
-    public function create_api(Request $request)
+    public function create_api(PonenteRequest $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'experiencia' => 'nullable|string',
-            'redes_sociales' => 'nullable|string',
-            'foto' => 'nullable|image|max:2048'
-        ]);
 
-        $ponente = new Ponente($validated);
+
+
 
         // Guardar imagen si se sube una
         if ($request->hasFile('foto')) {
 
-            $path = $request->file('foto')->store('ponentes', 'public');
-            $ponente->foto = Storage::url($path); // Aquí generas la URL pública
 
-            $ponente->save();
+            $fotografiaExtension = $request->foto->getClientOriginalExtension();
+            $fotografiaNombre = uniqid('', true) . '_' . time() . '.' . $fotografiaExtension;
+            $fotografiaPath = $request->file('foto')->storeAs('ponentes', $fotografiaNombre, 'public');
+
+
+            $request->foto = Storage::url($fotografiaPath);
+
+
+            $ponente = Ponente::create([
+                'nombre' => $request->nombre,
+                'foto' => $fotografiaPath,
+                'experiencia' => $request->experiencia,
+                'redes_sociales' => $request->redes_sociales
+            ]);
         }
 
-        $ponente->save();
+//        $ponente->save();
 
         return response()->json(['message' => 'Ponente creado correctamente', 'ponente' => $ponente], 201);
     }
 
-    public function update_api(Request $request, $id)
+    public function update_api(PonenteRequest $request, $id)
     {
         $ponente = Ponente::find($id);
 
@@ -156,14 +164,9 @@ class PonenteController extends Controller
             return response()->json(['message' => 'Ponente no encontrado'], 404);
         }
 
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'experiencia' => 'nullable|string',
-            'redes_sociales' => 'nullable|string',
-            'foto' => 'nullable|image|max:2048'
-        ]);
 
-        $ponente->update($validated);
+
+        $ponente->update($request->all());
 
         // Si se sube una nueva imagen, se reemplaza la anterior
         if ($request->hasFile('foto')) {

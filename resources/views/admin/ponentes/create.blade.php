@@ -42,7 +42,10 @@
                 const response = await fetch('/api/ponentes', {
                     method: 'POST',
                     body: formData,
-                    headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}" }
+                    headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}",
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Accept': 'application/json'
+                    }
                 });
 
                 const data = await response.json();

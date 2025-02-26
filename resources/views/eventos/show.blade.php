@@ -16,7 +16,13 @@
 
         try {
 // Obtener detalles del evento
-            const eventoResponse = await fetch(`/api/eventos/${eventoId}`);
+            const eventoResponse = await fetch(`/api/eventos/${eventoId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Accept': 'application/json'
+                }
+            });
             const evento = await eventoResponse.json();
 
             if (!evento) {
@@ -56,7 +62,13 @@
             let conferenciasCount = 0;
 
                 userInscripciones.forEach( async inscripcion => {
-                const eventoResponse1 = await fetch(`/api/eventos/${inscripcion.evento_id}`);
+                const eventoResponse1 = await fetch(`/api/eventos/${inscripcion.evento_id}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Accept': 'application/json'
+                    }
+                });
                 const event = await eventoResponse1.json();
                 if (event.tipo === 'taller') {
                     talleresCount++;
@@ -72,7 +84,7 @@
                 <h1>${evento.titulo}</h1>
                 <p><strong>Tipo:</strong> ${capitalizeFirstLetter(evento.tipo)}</p>
                 <p><strong>Fecha:</strong> ${new Date(evento.fecha).toLocaleDateString()}</p>
-                <p><strong>Hora:</strong> ${new Date(evento.hora_inicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(evento.hora_fin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                <p><strong>Hora:</strong> ${evento.hora_inicio} - ${evento.hora_fin}</p>
                 <p><strong>Ponente:</strong> ${evento.ponente ? evento.ponente.nombre : 'No asignado'}</p>
                 <p><strong>Capacidad Máxima:</strong> ${evento.capacidad_maxima}</p>
 
@@ -81,6 +93,23 @@
                 ${formHtml}
                 <a href="/eventos" class="btn btn-secondary mt-3">Volver a la lista</a>
             `;
+
+
+                    document.getElementById('inscribirse-form')?.addEventListener('click', async function(event) {
+                        event.preventDefault();
+                        const response = await fetch(`/api/eventos/${evento.id}/inscribirse`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                'Accept': 'application/json'
+                            }
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            alert('Te has inscrito al evento correctamente.');
+                            location.reload();
+                        }
+                    });
 
                 });
 
@@ -93,14 +122,13 @@
             if (eventoInscrito) {
                 formHtml = `
                 <p class="text-success"><strong>✅ Ya estás inscrito en este evento.</strong></p>
-                <button id="desapuntarse" class="btn btn-danger">Desapuntarme</button>
                 `;
 
             } else if (evento.capacidad_maxima > userInscripciones.length) {
                 formHtml = `
-                    <form id="inscribirse-form">
-                        <button type="submit" class="btn btn-primary">Inscribirme</button>
-                    </form>
+
+                        <button id="inscribirse-form" class="btn btn-primary">Inscribirme</button>
+
                 `;
             } else {
                 formHtml = `<p><strong>⚠️ Evento completo</strong></p>`;
@@ -112,7 +140,7 @@
                 <h1>${evento.titulo}</h1>
                 <p><strong>Tipo:</strong> ${capitalizeFirstLetter(evento.tipo)}</p>
                 <p><strong>Fecha:</strong> ${new Date(evento.fecha).toLocaleDateString()}</p>
-                <p><strong>Hora:</strong> ${new Date(evento.hora_inicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(evento.hora_fin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                <p><strong>Hora:</strong> ${evento.hora_inicio} - ${evento.hora_fin}</p>
                 <p><strong>Ponente:</strong> ${evento.ponente ? evento.ponente.nombre : 'No asignado'}</p>
                 <p><strong>Capacidad Máxima:</strong> ${evento.capacidad_maxima}</p>
 
@@ -132,7 +160,7 @@
                 const response = await fetch(`/api/eventos/${evento.id}/desapuntarse`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`, // Asegúrate de almacenar el token en localStorage
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
                         'Accept': 'application/json'
 
                     }
@@ -146,12 +174,12 @@
             });
 
             // Manejador de evento para inscribirse
-            document.getElementById('inscribirse-form')?.addEventListener('submit', async function(event) {
+            document.getElementById('inscribirse-form')?.addEventListener('click', async function(event) {
                 event.preventDefault();
                 const response = await fetch(`/api/eventos/${evento.id}/inscribirse`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`, // Asegúrate de almacenar el token en localStorage
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
                         'Accept': 'application/json'
                     }
                 });

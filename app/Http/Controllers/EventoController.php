@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\EventoRequest;
 use App\Models\Evento;
 use Illuminate\Http\Request;
 use App\Models\Ponente;
@@ -233,20 +234,13 @@ class EventoController extends Controller
         return response()->json($evento);
     }
 
-    public function store_api(Request $request)
+    public function store_api(EventoRequest $request)
     {
-        $request->validate([
-            'titulo' => 'required|string|max:255',
-            'tipo' => 'required|in:conferencia,taller',
-            'fecha' => 'required|date|after_or_equal:today',
-            'hora_inicio' => 'required',
-            'hora_fin' => 'required',
-            'ponente_id' => 'required|exists:ponentes,id',
-            'capacidad_maxima' => 'required|integer|min:1',
-        ]);
+
 
         $horaInicio = Carbon::parse($request->hora_inicio);
         $horaFin = Carbon::parse($request->hora_fin);
+
 
         // Validar superposición de eventos del mismo tipo
         $eventoExiste = Evento::where('tipo', $request->tipo)
@@ -274,22 +268,12 @@ class EventoController extends Controller
         return response()->json($evento, 201);
     }
 
-    public function update_api(Request $request, $id)
+    public function update_api(EventoRequest $request, $id)
     {
         $evento = Evento::find($id);
         if (!$evento) {
             return response()->json(['error' => 'Evento no encontrado'], 404);
         }
-
-        $request->validate([
-            'titulo' => 'required|string|max:255',
-            'tipo' => 'required|in:conferencia,taller',
-            'fecha' => 'required|date|after_or_equal:today',
-            'hora_inicio' => 'required',
-            'hora_fin' => 'required',
-            'ponente_id' => 'required|exists:ponentes,id',
-            'capacidad_maxima' => 'required|integer|min:1',
-        ]);
 
         $horaInicio = Carbon::parse($request->hora_inicio);
         $horaFin = Carbon::parse($request->hora_fin);
@@ -328,6 +312,11 @@ class EventoController extends Controller
             return response()->json(['error' => 'Evento no encontrado'], 404);
         }
 
+        // Verificar si el evento tiene usuarios inscritos
+        if ($evento->asistencias()->count() > 0) {
+            return response()->json(['error' => 'No se puede eliminar el evento porque tiene usuarios inscritos'], 400);
+        }
+
         $evento->delete();
 
         return response()->json(['message' => 'Evento eliminado con éxito']);
@@ -346,6 +335,7 @@ class EventoController extends Controller
 
         // Buscar el evento
         $evento = Evento::findOrFail($id);
+
         // Verificar si el usuario ya está inscrito
         if ($evento->asistencias()->where('usuario_id', $user->id)->exists()) {
             return response()->json(['error' => 'Ya estás inscrito en este evento'], 400);

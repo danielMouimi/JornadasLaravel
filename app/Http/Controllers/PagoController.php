@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PagoRequest;
 use App\Models\Pago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Ticket;
 use Illuminate\Support\Facades\Mail;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Mail\EnviarTicket;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\Snappy\Facades\SnappyPdf;
 
 class PagoController extends Controller
 {
@@ -20,49 +23,42 @@ class PagoController extends Controller
         return view('pagos.index');
     }
 
-    public function procesarPago(Request $request)
+    public function procesarPago(PagoRequest $request)
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        $request->validate([
-            'tipo_inscripcion' => 'required|in:presencial,virtual,gratuita',
-            'paypal_transaction_id' => $request->tipo_inscripcion !== 'gratuita' ? 'required|string' : 'nullable',
-        ]);
 
-        if ($request->tipo_inscripcion === 'gratuita' && !$user->es_alumno) {
-            return redirect()->route('pago.index')->with('error', 'Debes ser alumno para optar por la inscripción gratuita.');
-        }
+            if ($request->tipo_inscripcion === 'gratuita' && !$user->es_alumno) {
+                return response()->json([
+                    'error' => 'Debes ser alumno para optar por la inscripción gratuita.'
+                ], 403);
+            }
 
-        if ($request->tipo_inscripcion !== 'gratuita') {
-            Pago::create([
-                'usuario_id' => $user->id,
+            $user->update([
                 'tipo_inscripcion' => $request->tipo_inscripcion,
-                'monto' => $request->tipo_inscripcion === 'presencial' ? 20 : 10,
-                'paypal_transaction_id' => $request->paypal_transaction_id,
+                'confirmado' => true,
+                'total_pagado' => $user->total_pagado + ($request->tipo_inscripcion === 'presencial' ? 20 : ($request->tipo_inscripcion === 'virtual' ? 10 : 0)),
             ]);
+//
+            // Enviar correo
+            $this->enviarCorreoConPHPMailer($user);
+
+
+
+            return response()->json([
+                'redirect' => url('/dashboard')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error interno del servidor'.$e->getMessage(),
+                'message' => $e->getMessage(), // Muestra el error exacto
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ], 500);
         }
-
-        $user->update([
-            'tipo_inscripcion' => $request->tipo_inscripcion,
-            'confirmado' => true,
-            'total_pagado' => $user->total_pagado + ($request->tipo_inscripcion === 'presencial' ? 20 : ($request->tipo_inscripcion === 'virtual' ? 10 : 0)),
-        ]);
-
-        // Generar ticket
-        $codigo_ticket = strtoupper(uniqid('TICKET-'));
-        $ticket = Ticket::create([
-            'usuario_id' => $user->id,
-            'codigo' => $codigo_ticket,
-        ]);
-
-        // Generar PDF del ticket
-        $pdf = Pdf::loadView('tickets.pdf', compact('user', 'ticket'));
-
-        // Enviar correo con el ticket adjunto
-        Mail::to($user->email)->send(new EnviarTicket($user, $pdf));
-
-        return response()->json(['redirect' => route('dashboard')]);
     }
+
 
     /**
      * Procesa un pago (simulación).
@@ -124,5 +120,44 @@ class PagoController extends Controller
     public function destroy(Pago $pago)
     {
         //
+    }
+
+
+
+    public function enviarCorreoConPHPMailer($user)
+    {
+        try {
+            $mail = new PHPMailer(true);
+
+            // Configurar servidor SMTP
+            $mail->isSMTP();
+            $mail->Host = env('MAIL_HOST', 'smtp.gmail.com');
+            $mail->SMTPAuth = true;
+            $mail->Username = env('MAIL_USERNAME');
+            $mail->Password = env('MAIL_PASSWORD');
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = env('MAIL_PORT', 587);
+
+            // Configurar remitente y destinatario
+            $mail->setFrom('mouimidaniel@gmail.com', 'Jornadas de Videojuegos');
+            $mail->addAddress($user->email, $user->name);
+
+            // Asunto del correo
+            $mail->Subject = 'Tu ticket para las Jornadas de Videojuegos';
+
+            // Cuerpo del correo en HTML
+            $mail->isHTML(true);
+            $mail->Body = view('emails.ticket', ['user' => $user])->render();
+
+//            $pdf = SnappyPdf::loadView('emails.ticket', ['user' => $user]);
+//            $mail->addStringAttachment($pdf->output(), 'ticket.pdf', 'base64', 'application/pdf');
+;
+
+            // Enviar correo
+            $mail->send();
+
+        } catch (Exception $e) {
+            \Log::error('Error enviando correo: ' . $mail->ErrorInfo);
+        }
     }
 }

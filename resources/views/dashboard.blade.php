@@ -25,7 +25,9 @@
 
                 fetch(`/api/asistencias/${userId}`, {
                     headers: {
-                        "X-Requested-With": "XMLHttpRequest"
+                        "X-Requested-With": "XMLHttpRequest",
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Accept': 'application/json'
                     },
                     credentials: "same-origin"
                 })
@@ -48,7 +50,9 @@
                         asistencias.forEach(asistencia => {
                             fetch(`/api/eventos/${asistencia.evento_id}`, {
                                 headers: {
-                                    "X-Requested-With": "XMLHttpRequest"
+                                    "X-Requested-With": "XMLHttpRequest",
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                    'Accept': 'application/json'
                                 },
                                 credentials: "same-origin"
                             })

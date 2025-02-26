@@ -36,7 +36,7 @@
                         // Foto
                         const fotoCell = document.createElement('td');
                         const img = document.createElement('img');
-                        img.src = '/storage/' + ponente.foto;
+                        img.src =`${ponente.foto}`;
                         img.alt = ponente.nombre;
                         img.width = 80;
                         fotoCell.appendChild(img);
@@ -61,12 +61,7 @@
 
                         // Añadir la fila a la tabla
                         tbody.appendChild(row);
-                    });
-
-                    // Aquí se podría agregar la lógica de paginación si es necesario
-                    // Ejemplo de paginación: Mostrar un botón o link para la siguiente página
-                    const pagination = document.querySelector('#pagination');
-                    pagination.innerHTML = '<a href="/ponentes?page=2">Siguiente</a>';
+                    })
                 })
                 .catch(error => {
                     console.error('Error al cargar los ponentes:', error);

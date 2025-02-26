@@ -48,8 +48,44 @@
 
             onApprove: function (data, actions) {
                 return actions.order.capture().then(function (details) {
-                    alert('Transacción completada por: ' + details.payer.name.given_name);
-                    window.location.href = '/pagado';
+
+                    var tipoInscripcion
+                    if (precio == '15') {
+                        tipoInscripcion = "presencial";
+                    }else if (precio == '10'){
+                        tipoInscripcion = "virtual";
+                    }else {
+                        tipoInscripcion = "alumno";
+                    }
+
+                    fetch('/api/procesarPago', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': 'Bearer ' + localStorage.getItem('token')
+                        },
+                        body: JSON.stringify({
+                            tipo_inscripcion: tipoInscripcion,
+                        })
+                    })
+                        .then(response => {
+                    if (!response.ok) {
+                        console.log("fallo");
+                        alert(`fallo en response ${response.status}`);
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                    }
+                    )
+                        .then(data => {
+                            console.log("Pago procesado correctamente:", data);
+                            window.location.href = '/dashboard';
+                        })
+                        .catch(error => {
+                            console.error('Error al procesar el pago:', error);
+                            alert('Hubo un problema al procesar el pago.');
+                        });
                 });
             }
 

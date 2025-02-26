@@ -13,6 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         //
+        $middleware->alias([
+            'auth' => \App\Http\Middleware\Authenticate::class,  // Middleware de autenticación
+            'admin' => \App\Http\Middleware\Admin::class,
+            'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+            'registro.completo' => \App\Http\Middleware\RegistroCompletoMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

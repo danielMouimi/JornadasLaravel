@@ -3,6 +3,8 @@ namespace App\Http\Controllers\Home;
 
 use App\Http\Controllers\Controller;
 use App\Models\Evento;
+use App\Models\Ponente;
+
 class HomeController extends Controller
 {
     public function index()
@@ -12,6 +14,10 @@ class HomeController extends Controller
     }
     public function index_api() {
         $eventos = Evento::all();
-        return response()->json($eventos);
+        $ponentes = Ponente::all();
+        return response()->json([
+            'eventos' => $eventos,
+            'ponentes' => $ponentes
+        ], 200);
     }
 }
